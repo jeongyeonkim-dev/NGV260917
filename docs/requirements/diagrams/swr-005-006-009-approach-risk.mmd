@@ -1,0 +1,20 @@
+%% UML 상태기계 다이어그램 (Mermaid stateDiagram-v2)
+%% 대상 요구사항: SWR-005, SWR-006, SWR-009 (출처: OEM-SR-002)
+%% 좌/우 도어를 두 개의 독립된 영역으로 표현해 SWR-009(좌우 독립)를 시각화한다.
+stateDiagram-v2
+    state "왼쪽 도어 (rear_left_approach_risk)" as Left {
+        [*] --> L_ReleaseAllowed
+        L_ReleaseAllowed --> L_Locked : rear_left_approach_risk=TRUE\n[SWR-005] lock_left=LOCK, 원인="후측방 접근위험" 기록
+        L_Locked --> L_Locked : RELEASE 요청 수신\n[SWR-006] 요청 거부, 원인기록 갱신
+        L_Locked --> L_ReleaseAllowed : rear_left_approach_risk=FALSE
+    }
+    state "오른쪽 도어 (rear_right_approach_risk)" as Right {
+        [*] --> R_ReleaseAllowed
+        R_ReleaseAllowed --> R_Locked : rear_right_approach_risk=TRUE\n[SWR-005] lock_right=LOCK, 원인="후측방 접근위험" 기록
+        R_Locked --> R_Locked : RELEASE 요청 수신\n[SWR-006] 요청 거부, 원인기록 갱신
+        R_Locked --> R_ReleaseAllowed : rear_right_approach_risk=FALSE
+    }
+    note right of Right
+        [SWR-009] Left/Right 영역은 서로 독립적으로 평가된다.
+        한쪽 신호의 TRUE 상태는 다른 쪽 도어의 출력에 영향을 주지 않는다.
+    end note

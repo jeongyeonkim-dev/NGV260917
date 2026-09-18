@@ -1,0 +1,8 @@
+%% UML 상태기계 다이어그램 (Mermaid stateDiagram-v2)
+%% 대상 요구사항: SWR-021 (출처: OEM-SR-004)
+stateDiagram-v2
+    [*] --> Normal
+    Normal --> Normal : sensor_fault=FALSE\n신규 명령 정상 적용
+    Normal --> Fault : sensor_fault=TRUE(정규화 입력)\n[SWR-021] 첫 평가주기: 신규 명령 미적용, lock_left/lock_right는 직전 확정값 유지, SW상태=FAULT, 경고코드 제공
+    Fault --> Fault : sensor_fault=TRUE 유지\n[SWR-021] 직전 확정 출력 유지
+    Fault --> Normal : sensor_fault=FALSE로 복귀
