@@ -35,6 +35,7 @@ description: Python UnitTest 기반 TDD(Red-Green-Refactor)로 구현을 진행�
 ## 0단계 — 입력 확인 (이 프로젝트의 선행 조건)
 - 구현 대상 소프트웨어 단위의 상세설계(`detailed-design` 스킬 산출물)를 확인한다: 단위 인터페이스(파라미터, 방향, 데이터 타입, 유효범위, 물리단위), 사전/사후조건, 오류처리 방식, 동적 측면(호출순서).
 - 상세설계가 없거나 불완전하면(예: 유효범위 미기재) 구현을 시작하지 않는다 — 먼저 상세설계를 보완하도록 사용자에게 확인한다.
+- `references/template.md`(WP_Templates `TPL-SWE4-001`/`TPL-SWE4-002` 확정 양식)를 확인한다 — 이 스킬의 실제 산출물(Python 테스트 코드)과 별도로, 조직이 요구하는 형식화된 단위시험 명세서·결과서(xlsx)도 함께 채운다.
 
 ## Red-Green-Refactor 사이클
 
