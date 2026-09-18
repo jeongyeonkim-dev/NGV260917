@@ -1,0 +1,11 @@
+%% UML 상태기계 다이어그램 (Mermaid stateDiagram-v2)
+%% 대상 요구사항: SWR-007, SWR-008 (출처: OEM-SR-001)
+stateDiagram-v2
+    [*] --> Normal
+    Normal --> Normal : crash_status=NONE/PENDING/INVALID\n[SWR-008] 긴급해제 미개시, lock_left/lock_right는 다른 요구사항이 정한 값 유지
+    Normal --> EmergencyRelease : crash_status=CONFIRMED(유효)\n[SWR-007] 300ms 이내 lock_left=RELEASE, lock_right=RELEASE (다른 명령보다 우선)
+    EmergencyRelease --> EmergencyRelease : crash_status=CONFIRMED 유지\n[SWR-007] RELEASE 유지
+    note right of Normal
+        Normal 상태는 crash_status가 CONFIRMED가 아닌 모든 경우(NONE/PENDING/INVALID)를 포함한다.
+        [SWR-008]은 이 상태에서 SWR-007의 강제 RELEASE가 트리거되지 않음을 보장한다.
+    end note
