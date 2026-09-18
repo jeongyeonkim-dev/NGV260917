@@ -1,0 +1,115 @@
+name: CI
+
+# PR이 생성/갱신될 때, 그리고 main에 머지될 때 지속적 통합(빌드/린트)과
+# 지속적 테스트(unittest + 커버리지)를 수행한다.
+# coding/tdd 스킬(.claude/skills/coding, .claude/skills/tdd)이 정의한
+# 품질지표(순환복잡도 10 이하 등)를 CI에서도 동일하게 강제한다.
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint & 품질지표(순환복잡도)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: 린트 도구 설치
+        run: pip install ruff pylint radon xenon
+
+      - name: 대상 Python 파일 확인
+        id: files
+        run: |
+          if git ls-files '*.py' | grep -q .; then
+            echo "has_py=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_py=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::아직 Python 소스가 없습니다 — 린트를 건너뜁니다."
+          fi
+
+      - name: ruff (스타일·정적분석)
+        if: steps.files.outputs.has_py == 'true'
+        run: ruff check .
+
+      - name: xenon (순환복잡도 ≤10 강제, CLAUDE.md 품질지표 근거)
+        if: steps.files.outputs.has_py == 'true'
+        run: xenon --max-absolute B --max-modules B --max-average A .
+
+      - name: pylint (네이밍 규칙 등)
+        if: steps.files.outputs.has_py == 'true'
+        run: pylint $(git ls-files '*.py') || true
+        # pylint는 스타일 경고가 많아 기본은 정보성(비차단)으로 실행한다.
+        # naming-style을 엄격히 차단하고 싶으면 위 줄의 `|| true`를 제거한다.
+
+  test:
+    name: 단위·통합 테스트 + 커버리지
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: 프로젝트 의존성 설치 (있는 경우)
+        run: |
+          pip install coverage
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+          if [ -f pyproject.toml ]; then pip install -e . || true; fi
+
+      - name: 테스트 존재 확인
+        id: tests
+        run: |
+          if [ -d tests ] && find tests -name 'test_*.py' | grep -q .; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::tests/ 디렉터리에 테스트가 아직 없습니다 — 이 단계는 코드가 추가되면 자동으로 활성화됩니다."
+          fi
+
+      - name: unittest 실행 (커버리지 측정 포함)
+        if: steps.tests.outputs.has_tests == 'true'
+        run: |
+          coverage run --branch -m unittest discover -s tests
+          coverage report -m
+          coverage xml
+
+      - name: 커버리지 리포트 업로드
+        if: steps.tests.outputs.has_tests == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+          retention-days: 14
+
+  status-check:
+    name: CI 통과 확인
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 결과 판정
+        run: |
+          if [ "${{ needs.lint.result }}" != "success" ] || [ "${{ needs.test.result }}" != "success" ]; then
+            echo "lint 또는 test 잡이 실패했습니다."
+            exit 1
+          fi
+          echo "모든 검사를 통과했습니다."
